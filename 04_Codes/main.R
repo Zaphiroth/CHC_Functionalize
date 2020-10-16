@@ -11,16 +11,30 @@ target.city <- c("北京", "常州", "福州", "广州", "杭州", "合肥", "�
                  "无锡", "徐州")
 
 # PCHC info
-pchc.universe.raw <- read.xlsx("02_Inputs/Universe_PCHCCode_20200507.xlsx", sheet = "PCHC")
+pchc.universe.raw <- read.xlsx("02_Inputs/Universe_PCHCCode_20200927.xlsx", sheet = "PCHC")
 
-pchc.universe.m <- pchc.universe.raw %>% 
-  group_by(pchc = PCHC_Code) %>% 
-  summarise(province = first(na.omit(`省`)),
-            city = first(na.omit(`地级市`)),
-            district = first(na.omit(`区[县/县级市】`)),
+pchc.universe1 <- pchc.universe.raw %>% 
+  filter(!is.na(`单位名称`), !is.na(PCHC_Code)) %>% 
+  group_by(province = `省`, city = `地级市`, district = `区[县/县级市】`, hospital = `单位名称`) %>% 
+  summarise(pchc = first(PCHC_Code), 
             est = first(na.omit(`其中：西药药品收入（千元）`))) %>% 
-  ungroup() %>% 
-  filter(!is.na(est))
+  ungroup()
+
+pchc.universe2 <- pchc.universe.raw %>% 
+  filter(!is.na(ZS_Servier.name), !is.na(PCHC_Code)) %>% 
+  group_by(province = `省`, city = `地级市`, district = `区[县/县级市】`, hospital = `ZS_Servier.name`) %>% 
+  summarise(pchc = first(PCHC_Code), 
+            est = first(na.omit(`其中：西药药品收入（千元）`))) %>% 
+  ungroup()
+
+pchc.mapping.raw <- bind_rows(pchc.universe1, pchc.universe2) %>% 
+  distinct(province, city, district, hospital, pchc)
+
+pchc.info.raw <- pchc.universe.raw %>% 
+  rename(province = `省`, 
+         city = `地级市`, 
+         district = `区[县/县级市】`, 
+         pchc = PCHC_Code)
 
 # city tier
 city.tier <- read.xlsx("02_Inputs/pchc_city_tier.xlsx") %>% 
@@ -45,7 +59,7 @@ market.def <- read_xlsx("02_Inputs/Market_Definition_20200708.xlsx") %>%
   filter(!is.na(market))
 
 
-##---- Raw data ----
+##---- Raw data 1 ----
 # Shanghai
 servier.sh.raw <- read.xlsx("02_Inputs/raw data/shanghai_201805_202004_packid_moleinfo_PCHC.xlsx")
 
@@ -92,42 +106,58 @@ total.raw <- bind_rows(servier.history, servier.sh) %>%
   left_join(total.sales, by = 'pchc')
 
 
+##---- Raw data 2 ----
+# total.raw <- read_feather('02_Inputs/Servier_2020Q2/01_Servier_CHC_Raw.feather')
+
+
+##---- PCHC universe ----
+pchc.universe <- bind_rows(total.raw, pchc.universe1) %>% 
+  group_by(pchc) %>% 
+  summarise(province = first(province),
+            city = first(na.omit(city)),
+            district = first(na.omit(district)), 
+            est = first(na.omit(est))) %>% 
+  ungroup() %>% 
+  filter(!is.na(province), !is.na(city), !is.na(district), !is.na(est)) %>% 
+  mutate(flag_sample = if_else(pchc %in% unique(total.raw$pchc), 1, 0))
+
+pchc.info <- bind_rows(total.raw, pchc.info.raw) %>% 
+  group_by(pchc) %>% 
+  summarise(province = first(na.omit(province)), 
+            city = first(na.omit(city)), 
+            district = first(na.omit(district)), 
+            pop = first(na.omit(`人口`)), 
+            pop1 = first(na.omit(`其中：0-14岁人口数`)), 
+            pop2 = first(na.omit(`15-64岁人口数`)), 
+            pop3 = first(na.omit(`65岁及以上人口数`)), 
+            doc = first(na.omit(`2016年执业医师（助理）人数`)), 
+            pat = first(na.omit(`2016年总诊疗人次数`)), 
+            inc = first(na.omit(`2016年药品收入（千元）`)), 
+            est = first(na.omit(`其中：西药药品收入（千元）`))) %>% 
+  ungroup() %>% 
+  filter(!is.na(pop), !is.na(pop1), !is.na(pop2), !is.na(pop3), !is.na(doc), 
+         !is.na(pat), !is.na(inc), !is.na(est)) %>% 
+  mutate(flag_sample = if_else(pchc %in% unique(total.raw$pchc), 1, 0))
+
+
 ##---- Run Project ----
+# source('04_Codes/SampleProject.R', encoding = 'UTF-8')
 source('04_Codes/SampleProject.R', encoding = 'UTF-8')
-source('04_Codes/SampleProject1.R', encoding = 'UTF-8')
-source('04_Codes/ShanghaiProject.R', encoding = 'UTF-8')
-source('04_Codes/ShanghaiProject1.R', encoding = 'UTF-8')
+# source('04_Codes/ShanghaiProject.R', encoding = 'UTF-8')
+source('04_Codes/SmallSampleProjection.R', encoding = 'UTF-8')
 source('04_Codes/NationProject.R', encoding = 'UTF-8')
 
-proj.sample <- SampleProject(total.raw, pchc.universe.m, 
-                             target.city, market.def)
+# proj.sample <- SampleProject(total.raw, pchc.universe, target.city, market.def)
+proj.sample <- SampleProject(total.raw, pchc.universe)
 
-proj.sample <- SampleProject1(total.raw, pchc.universe.m)
+# proj.sh <- ShanghaiProject(total.raw, pchc.universe)
+proj.sh <- SmallSampleProjection(total.raw, pchc.info, '上海')
 
-proj.sh <- ShanghaiProject(total.raw, pchc.universe.raw)
+proj.sample.total <- proj.sample %>% 
+  filter(!(province %in% '上海')) %>% 
+  bind_rows(proj.sh)
 
-proj.sh <- ShanghaiProject1(total.raw, pchc.universe.raw)
-
-proj.result <- bind_rows(proj.sample, proj.sh)
-
-proj.nation <- NationProject(proj.result, pchc.universe.m, city.tier)
-
-
-##---- Bind ----
-total.proj <- bind_rows(proj.result, proj.nation) %>% 
-  mutate(year = stri_sub(date, 1, 4), 
-         quarter = stri_sub(date, 5, 6), 
-         quarter = ifelse(quarter %in% c("01", "02", "03"), "Q1",
-                          ifelse(quarter %in% c("04", "05", "06"), "Q2",
-                                 ifelse(quarter %in% c("07", "08", "09"), "Q3",
-                                        ifelse(quarter %in% c("10", "11", "12"), "Q4",
-                                               NA_character_)))), 
-         quarter = stri_paste(year, quarter)) %>% 
-  filter(city %in% target.city) %>% 
-  group_by(year, quarter, date, province, city, packid, flag_sample) %>% 
-  summarise(sales = sum(sales, na.rm = TRUE), 
-            units = sum(units, na.rm = TRUE)) %>% 
-  ungroup()
+proj.nation <- NationProject(proj.sample.total, pchc.universe, city.tier)
 
 
 ##---- Format info ----
@@ -216,9 +246,10 @@ city.en <- read.xlsx("02_Inputs/CityEN.xlsx")
 ##---- Run format ----
 source('04_Codes/FormatServier.R')
 
-servier.result <- FormatServier(total.proj, market.def, corp.pack, pack.size, 
+servier.result <- FormatServier(proj.sample.total, proj.nation, target.city, 
+                                market.def, corp.pack, pack.size, 
                                 capital.47, prod.bid, corp.type, atc3.cn, 
                                 molecule.cn, corp.add, packid.profile, 
                                 prod.profile, city.en)
 
-write.xlsx(servier.result, '03_Outputs/Servier_CHC_Result2.xlsx')
+write.xlsx(servier.result, '03_Outputs/Servier_CHC_Result.xlsx')

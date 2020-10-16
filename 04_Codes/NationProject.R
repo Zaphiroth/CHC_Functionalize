@@ -6,13 +6,13 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-NationProject <- function(proj.result, 
-                          pchc.universe.m, 
+NationProject <- function(proj.sample.total, 
+                          pchc.universe, 
                           city.tier) {
   
   ##---- Nation info ----
   # universe city
-  universe.city <- pchc.universe.m %>% 
+  universe.city <- pchc.universe %>% 
     left_join(city.tier, by = "city") %>% 
     mutate(tier = ifelse(is.na(tier), 1, tier)) %>% 
     group_by(province, city, district, tier) %>% 
@@ -20,7 +20,7 @@ NationProject <- function(proj.result,
     ungroup()
   
   # nation sample
-  nation.sample <- proj.result %>% 
+  nation.sample <- proj.sample.total %>% 
     left_join(city.tier, by = "city") %>% 
     mutate(tier = ifelse(is.na(tier), 1, tier)) %>% 
     group_by(date, province, city, tier, district, packid) %>% 
@@ -43,9 +43,10 @@ NationProject <- function(proj.result,
       left_join(nation.sample, by = c("tier")) %>% 
       mutate(est_gap = abs(est.x - est.y)) %>% 
       filter(est_gap <= min(est_gap)) %>% 
-      mutate(slope = ifelse(is.infinite(est.x / est.y) | is.na(est.x / est.y) | is.nan(est.x / est.y), 
+      mutate(slope = est.x / est.y, 
+             slope = ifelse(is.infinite(slope) | is.na(slope) | is.nan(slope), 
                             1, 
-                            est.x / est.y)) %>% 
+                            slope)) %>% 
       pivot_longer(cols = c(starts_with('sales'), starts_with('units')), 
                    names_to = c('index', 'date'), 
                    names_sep = '_', 
@@ -69,7 +70,7 @@ NationProject <- function(proj.result,
               units = sum(units_m, na.rm = TRUE)) %>% 
     ungroup() %>% 
     filter(sales > 0, units > 0) %>% 
-    filter(!(city %in% unique(proj.result$city)))
+    filter(!(city %in% unique(proj.sample.total$city)))
   
   return(proj.nation)
 }

@@ -6,12 +6,28 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-FormatServier <- function(total.proj, market.def, corp.pack, pack.size, 
+FormatServier <- function(proj.sample.total, proj.nation, target.city, 
+                          market.def, corp.pack, pack.size, 
                           capital.47, prod.bid, corp.type, atc3.cn, 
-                          molecule.cn, corp.add, packid.profile, prod.profile, 
-                          city.en) {
+                          molecule.cn, corp.add, packid.profile, 
+                          prod.profile, city.en) {
   
   ##---- Adjustment ----
+  total.proj <- bind_rows(proj.sample, proj.sh, proj.nation) %>% 
+    mutate(year = stri_sub(date, 1, 4), 
+           quarter = stri_sub(date, 5, 6), 
+           quarter = ifelse(quarter %in% c("01", "02", "03"), "Q1",
+                            ifelse(quarter %in% c("04", "05", "06"), "Q2",
+                                   ifelse(quarter %in% c("07", "08", "09"), "Q3",
+                                          ifelse(quarter %in% c("10", "11", "12"), "Q4",
+                                                 NA_character_)))), 
+           quarter = stri_paste(year, quarter)) %>% 
+    filter(city %in% target.city) %>% 
+    group_by(year, quarter, date, province, city, packid, flag_sample) %>% 
+    summarise(sales = sum(sales, na.rm = TRUE), 
+              units = sum(units, na.rm = TRUE)) %>% 
+    ungroup()
+  
   adj.raw <- total.proj %>% 
     inner_join(market.def, by = 'packid') %>% 
     mutate(market = if_else(atc2 %in% c("C07", "C08"), "IHD", market)) %>% 
@@ -43,7 +59,7 @@ FormatServier <- function(total.proj, market.def, corp.pack, pack.size,
   servier.result <- adj.nation %>% 
     left_join(corp.pack, by = 'packid') %>% 
     left_join(pack.size, by = 'packid') %>% 
-    filter(stri_sub(pack_desc, 1, 4) %in% c("CAP ", "TAB ", "PILL")) %>% 
+    filter(stri_sub(pack_desc, 1, 3) %in% c("CAP", "TAB", "PIL")) %>% 
     mutate(dosage_units = pack_size * units,
            channel = "CHC") %>% 
     group_by(province, city, year, quarter, market, atc3, molecule_desc, packid, 
@@ -123,13 +139,13 @@ FormatServier <- function(total.proj, market.def, corp.pack, pack.size,
     ) %>% 
     left_join(city.en, by = c('city' = 'City')) %>% 
     mutate(
-      `Period-MAT` = case_when(
-        quarter %in% c("2020Q1", "2020Q2", "2020Q3", "2020Q4") ~ "MAT20Q4",
-        quarter %in% c("2019Q1", "2019Q2", "2019Q3", "2019Q4") ~ "MAT19Q4",
-        quarter %in% c("2018Q1", "2018Q2", "2018Q3", "2018Q4") ~ "MAT18Q4",
-        quarter %in% c("2017Q1", "2017Q2", "2017Q3", "2017Q4") ~ "MAT17Q4",
-        TRUE ~ NA_character_
-      ), 
+      # `Period-MAT` = case_when(
+      #   quarter %in% c("2020Q1", "2020Q2", "2020Q3", "2020Q4") ~ "MAT20Q4",
+      #   quarter %in% c("2019Q1", "2019Q2", "2019Q3", "2019Q4") ~ "MAT19Q4",
+      #   quarter %in% c("2018Q1", "2018Q2", "2018Q3", "2018Q4") ~ "MAT18Q4",
+      #   quarter %in% c("2017Q1", "2017Q2", "2017Q3", "2017Q4") ~ "MAT17Q4",
+      #   TRUE ~ NA_character_
+      # ), 
       TherapeuticClsII = case_when(
         market == "HTN" & atc3 == "C09A" ~ "RAASi Plain",
         market == "HTN" & atc3 == "C09C" ~ "RAASi Plain",
@@ -177,7 +193,7 @@ FormatServier <- function(total.proj, market.def, corp.pack, pack.size,
            Sales = sales, 
            Units = units, 
            DosageUnits = dosage_units, 
-           `Period-MAT`, 
+           # `Period-MAT`, 
            `CITY-EN`, 
            TherapeuticClsII, 
            Prod_CN_Name = ims_product_cn, 
@@ -190,21 +206,10 @@ FormatServier <- function(total.proj, market.def, corp.pack, pack.size,
            `是否是中标品种`, 
            `是否是MNC`, 
            `ATC3中文分类`) %>% 
-    arrange(Channel, Date, Province, City, MKT, Pack_ID) %>% 
-    filter(City %in% target.city)
+    arrange(Channel, Date, Province, City, MKT, Pack_ID)
   
   
   return(servier.result)
 }
-
-
-
-
-
-
-
-
-
-
 
 

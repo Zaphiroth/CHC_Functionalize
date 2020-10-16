@@ -6,46 +6,50 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-ShanghaiProject1 <- function(total.raw, 
-                             pchc.universe.raw) {
+SmallSampleProjection <- function(total.raw, 
+                                  pchc.info, 
+                                  small = '上海') {
   
   ##---- Shanghai info ----
   # Shanghai PCHC
-  pchc.sh.m <- pchc.universe.raw %>% 
-    filter(`地级市` %in% c('上海')) %>% 
-    group_by(pchc = PCHC_Code) %>% 
-    summarise(province = first(na.omit(`省`)),
-              city = first(na.omit(`地级市`)),
-              district = first(na.omit(`区[县/县级市】`)),
-              pop = first(na.omit(`人口`)),
-              pop1 = first(na.omit(`其中：0-14岁人口数`)),
-              pop2 = first(na.omit(`15-64岁人口数`)),
-              pop3 = first(na.omit(`65岁及以上人口数`)),
-              doc = first(na.omit(`2016年执业医师（助理）人数`)),
-              pat = first(na.omit(`2016年总诊疗人次数`)),
-              inc = first(na.omit(`2016年药品收入（千元）`)),
-              est = first(na.omit(`其中：西药药品收入（千元）`))) %>% 
-    ungroup() %>% 
-    filter(!is.na(pop), !is.na(pop1), !is.na(pop2), !is.na(pop3), !is.na(doc), 
-           !is.na(pat), !is.na(inc), !is.na(est))
+  # pchc.sh.m <- pchc.universe %>% 
+  #   filter(`地级市` %in% c('上海')) %>% 
+  #   group_by(pchc = PCHC_Code) %>% 
+  #   summarise(province = first(na.omit(`省`)),
+  #             city = first(na.omit(`地级市`)),
+  #             district = first(na.omit(`区[县/县级市】`)),
+  #             pop = first(na.omit(`人口`)),
+  #             pop1 = first(na.omit(`其中：0-14岁人口数`)),
+  #             pop2 = first(na.omit(`15-64岁人口数`)),
+  #             pop3 = first(na.omit(`65岁及以上人口数`)),
+  #             doc = first(na.omit(`2016年执业医师（助理）人数`)),
+  #             pat = first(na.omit(`2016年总诊疗人次数`)),
+  #             inc = first(na.omit(`2016年药品收入（千元）`)),
+  #             est = first(na.omit(`其中：西药药品收入（千元）`))) %>% 
+  #   ungroup() %>% 
+  #   filter(!is.na(pop), !is.na(pop1), !is.na(pop2), !is.na(pop3), !is.na(doc), 
+  #          !is.na(pat), !is.na(inc), !is.na(est))
   
-  pchc.sh <- bind_rows(total.raw, pchc.sh.m) %>% 
-    filter(city %in% c('上海')) %>% 
-    group_by(pchc) %>% 
-    summarise(province = first(na.omit(province)), 
-              city = first(na.omit(city)), 
-              district = first(na.omit(district)), 
-              pop = sum(pop, na.rm = TRUE), 
-              pop1 = sum(pop1, na.rm = TRUE),  
-              pop2 = sum(pop2, na.rm = TRUE), 
-              pop3 = sum(pop3, na.rm = TRUE), 
-              doc = sum(doc, na.rm = TRUE), 
-              pat = sum(pat, na.rm = TRUE), 
-              inc = sum(inc, na.rm = TRUE), 
-              est = sum(est, na.rm = TRUE)) %>% 
-    ungroup() %>% 
-    filter(pop > 0, est > 0) %>% 
-    mutate(flag_sample = if_else(pchc %in% unique(total.raw$pchc), 1, 0))
+  # pchc.sh <- bind_rows(total.raw, pchc.sh.m) %>% 
+  #   filter(city %in% c('上海')) %>% 
+  #   group_by(pchc) %>% 
+  #   summarise(province = first(na.omit(province)), 
+  #             city = first(na.omit(city)), 
+  #             district = first(na.omit(district)), 
+  #             pop = sum(pop, na.rm = TRUE), 
+  #             pop1 = sum(pop1, na.rm = TRUE),  
+  #             pop2 = sum(pop2, na.rm = TRUE), 
+  #             pop3 = sum(pop3, na.rm = TRUE), 
+  #             doc = sum(doc, na.rm = TRUE), 
+  #             pat = sum(pat, na.rm = TRUE), 
+  #             inc = sum(inc, na.rm = TRUE), 
+  #             est = sum(est, na.rm = TRUE)) %>% 
+  #   ungroup() %>% 
+  #   filter(pop > 0, est > 0) %>% 
+  #   mutate(flag_sample = if_else(pchc %in% unique(total.raw$pchc), 1, 0))
+  
+  pchc.sh <- pchc.info %>% 
+    filter(province %in% small)
   
   # partition
   pchc.sh.sample <- pchc.sh %>% 
@@ -96,13 +100,14 @@ ShanghaiProject1 <- function(total.raw,
   ##---- Projection ----
   # projection data
   proj.sh.data <- total.raw %>% 
-    filter(city %in% c('上海')) %>% 
+    filter(province %in% small) %>% 
     arrange(province, city, district, pchc, packid, date) %>% 
     group_by(pchc, packid, date) %>% 
     summarise(sales = sum(sales, na.rm = TRUE), 
               units = sum(units, na.rm = TRUE)) %>% 
     ungroup()
   
+  # est ratio
   est.sh <- pchc.sh %>% 
     distinct(pchc, est)
   
@@ -119,6 +124,7 @@ ShanghaiProject1 <- function(total.raw,
     ungroup() %>% 
     mutate(est_ratio = est / knn_est)
   
+  # result
   proj.sh.nonsample <- pchc.sh.nonsample %>% 
     distinct(pchc, province, city, district, flag_sample) %>% 
     left_join(knn.indice, by = 'pchc') %>% 
@@ -133,7 +139,7 @@ ShanghaiProject1 <- function(total.raw,
            units = knn_units * est_ratio)
   
   proj.sh <- total.raw %>% 
-    filter(city == '上海') %>% 
+    filter(province %in% small) %>% 
     mutate(flag_sample = 1) %>% 
     bind_rows(proj.sh.nonsample) %>% 
     group_by(date, province, city, district, packid, flag_sample) %>% 
