@@ -13,7 +13,7 @@ FormatServier <- function(proj.sample.total, proj.nation, target.city,
                           prod.profile, city.en) {
   
   ##---- Adjustment ----
-  total.proj <- bind_rows(proj.sample, proj.sh, proj.nation) %>% 
+  proj.total <- bind_rows(proj.sample.total, proj.nation) %>% 
     mutate(year = stri_sub(date, 1, 4), 
            quarter = stri_sub(date, 5, 6), 
            quarter = ifelse(quarter %in% c("01", "02", "03"), "Q1",
@@ -28,7 +28,7 @@ FormatServier <- function(proj.sample.total, proj.nation, target.city,
               units = sum(units, na.rm = TRUE)) %>% 
     ungroup()
   
-  adj.raw <- total.proj %>% 
+  adj.raw <- proj.total %>% 
     inner_join(market.def, by = 'packid') %>% 
     mutate(market = if_else(atc2 %in% c("C07", "C08"), "IHD", market)) %>% 
     filter(!(market == "IHD" & molecule_desc == "IVABRADINE")) %>% 

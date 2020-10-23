@@ -15,6 +15,7 @@ NationProject <- function(proj.sample.total,
   universe.city <- pchc.universe %>% 
     left_join(city.tier, by = "city") %>% 
     mutate(tier = ifelse(is.na(tier), 1, tier)) %>% 
+    filter(!is.na(est)) %>% 
     group_by(province, city, district, tier) %>% 
     summarise(est = sum(est, na.rm = TRUE)) %>% 
     ungroup()

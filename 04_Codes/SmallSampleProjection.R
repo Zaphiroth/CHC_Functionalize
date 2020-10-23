@@ -6,7 +6,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-SmallSampleProjection <- function(total.raw, 
+SmallSampleProjection <- function(raw.total, 
                                   pchc.info, 
                                   small = '上海') {
   
@@ -30,7 +30,7 @@ SmallSampleProjection <- function(total.raw,
   #   filter(!is.na(pop), !is.na(pop1), !is.na(pop2), !is.na(pop3), !is.na(doc), 
   #          !is.na(pat), !is.na(inc), !is.na(est))
   
-  # pchc.sh <- bind_rows(total.raw, pchc.sh.m) %>% 
+  # pchc.sh <- bind_rows(raw.total, pchc.sh.m) %>% 
   #   filter(city %in% c('上海')) %>% 
   #   group_by(pchc) %>% 
   #   summarise(province = first(na.omit(province)), 
@@ -46,7 +46,7 @@ SmallSampleProjection <- function(total.raw,
   #             est = sum(est, na.rm = TRUE)) %>% 
   #   ungroup() %>% 
   #   filter(pop > 0, est > 0) %>% 
-  #   mutate(flag_sample = if_else(pchc %in% unique(total.raw$pchc), 1, 0))
+  #   mutate(flag_sample = if_else(pchc %in% unique(raw.total$pchc), 1, 0))
   
   pchc.sh <- pchc.info %>% 
     filter(province %in% small)
@@ -99,7 +99,7 @@ SmallSampleProjection <- function(total.raw,
   
   ##---- Projection ----
   # projection data
-  proj.sh.data <- total.raw %>% 
+  proj.small.data <- raw.total %>% 
     filter(province %in% small) %>% 
     arrange(province, city, district, pchc, packid, date) %>% 
     group_by(pchc, packid, date) %>% 
@@ -107,7 +107,7 @@ SmallSampleProjection <- function(total.raw,
               units = sum(units, na.rm = TRUE)) %>% 
     ungroup()
   
-  # est ratio
+  # est ratio factor
   est.sh <- pchc.sh %>% 
     distinct(pchc, est)
   
@@ -125,11 +125,11 @@ SmallSampleProjection <- function(total.raw,
     mutate(est_ratio = est / knn_est)
   
   # result
-  proj.sh.nonsample <- pchc.sh.nonsample %>% 
+  proj.small.nonsample <- pchc.sh.nonsample %>% 
     distinct(pchc, province, city, district, flag_sample) %>% 
     left_join(knn.indice, by = 'pchc') %>% 
     left_join(knn.weight, by = c('pchc', 'knn_level')) %>% 
-    left_join(proj.sh.data, by = c('knn_pchc' = 'pchc')) %>% 
+    left_join(proj.small.data, by = c('knn_pchc' = 'pchc')) %>% 
     group_by(province, city, district, pchc, packid, date, flag_sample) %>% 
     summarise(knn_sales = sum(sales * knn_weight, na.rm = TRUE), 
               knn_units = sum(units * knn_weight, na.rm = TRUE)) %>% 
@@ -138,10 +138,10 @@ SmallSampleProjection <- function(total.raw,
     mutate(sales = knn_sales * est_ratio, 
            units = knn_units * est_ratio)
   
-  proj.sh <- total.raw %>% 
+  proj.small <- raw.total %>% 
     filter(province %in% small) %>% 
     mutate(flag_sample = 1) %>% 
-    bind_rows(proj.sh.nonsample) %>% 
+    bind_rows(proj.small.nonsample) %>% 
     group_by(date, province, city, district, packid, flag_sample) %>% 
     summarise(sales = sum(sales, na.rm = TRUE), 
               units = sum(units, na.rm = TRUE)) %>% 
@@ -149,7 +149,7 @@ SmallSampleProjection <- function(total.raw,
     filter(sales > 0, units > 0)
   
   
-  return(proj.sh)
+  return(proj.small)
 }
 
 

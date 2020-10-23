@@ -6,12 +6,12 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-SampleProject <- function(total.raw, 
+SampleProject <- function(raw.total, 
                           pchc.universe) {
   
   ##---- Universe info ----
   # projection data
-  proj.data <- total.raw %>% 
+  proj.data <- raw.total %>% 
     arrange(province, city, district, pchc, packid, date) %>% 
     group_by(province, city, district, pchc, packid, date) %>% 
     summarise(sales = sum(sales, na.rm = TRUE), 

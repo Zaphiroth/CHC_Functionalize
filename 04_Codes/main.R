@@ -11,7 +11,7 @@ target.city <- c("北京", "常州", "福州", "广州", "杭州", "合肥", "�
                  "无锡", "徐州")
 
 # PCHC info
-pchc.universe.raw <- read.xlsx("02_Inputs/Universe_PCHCCode_20200927.xlsx", sheet = "PCHC")
+pchc.universe.raw <- read.xlsx("02_Inputs/Universe_PCHCCode_20201019.xlsx", sheet = "PCHC")
 
 pchc.universe1 <- pchc.universe.raw %>% 
   filter(!is.na(`单位名称`), !is.na(PCHC_Code)) %>% 
@@ -39,9 +39,9 @@ pchc.info.raw <- pchc.universe.raw %>%
 # city tier
 city.tier <- read.xlsx("02_Inputs/pchc_city_tier.xlsx") %>% 
   group_by(city) %>% 
-  mutate(tier = ifelse(is.na(city_tier), first(na.omit(city_tier)), city_tier)) %>% 
+  mutate(tier = if_else(is.na(city_tier), first(na.omit(city_tier)), city_tier)) %>% 
   ungroup() %>% 
-  mutate(tier = ifelse(is.na(tier), 5, tier)) %>% 
+  mutate(tier = if_else(is.na(tier), 5, tier)) %>% 
   distinct(city, tier)
 
 # IMS pack
@@ -96,7 +96,7 @@ total.sales <- bind_rows(servier.history, servier.sh) %>%
             sales = sum(sales, na.rm = TRUE)) %>% 
   ungroup()
 
-total.raw <- bind_rows(servier.history, servier.sh) %>% 
+raw.total <- bind_rows(servier.history, servier.sh) %>% 
   filter(pchc != "#N/A", units > 0, sales > 0, year == '2019') %>% 
   group_by(pchc) %>% 
   summarise(province = first(na.omit(province)),
@@ -107,11 +107,11 @@ total.raw <- bind_rows(servier.history, servier.sh) %>%
 
 
 ##---- Raw data 2 ----
-# total.raw <- read_feather('02_Inputs/Servier_2020Q2/01_Servier_CHC_Raw.feather')
+# raw.total <- read_feather('02_Inputs/Servier_2020Q2/01_Servier_CHC_Raw.feather')
 
 
 ##---- PCHC universe ----
-pchc.universe <- bind_rows(total.raw, pchc.universe1) %>% 
+pchc.universe <- bind_rows(raw.total, pchc.universe1) %>% 
   group_by(pchc) %>% 
   summarise(province = first(province),
             city = first(na.omit(city)),
@@ -119,9 +119,9 @@ pchc.universe <- bind_rows(total.raw, pchc.universe1) %>%
             est = first(na.omit(est))) %>% 
   ungroup() %>% 
   filter(!is.na(province), !is.na(city), !is.na(district), !is.na(est)) %>% 
-  mutate(flag_sample = if_else(pchc %in% unique(total.raw$pchc), 1, 0))
+  mutate(flag_sample = if_else(pchc %in% unique(raw.total$pchc), 1, 0))
 
-pchc.info <- bind_rows(total.raw, pchc.info.raw) %>% 
+pchc.info <- bind_rows(raw.total, pchc.info.raw) %>% 
   group_by(pchc) %>% 
   summarise(province = first(na.omit(province)), 
             city = first(na.omit(city)), 
@@ -137,7 +137,7 @@ pchc.info <- bind_rows(total.raw, pchc.info.raw) %>%
   ungroup() %>% 
   filter(!is.na(pop), !is.na(pop1), !is.na(pop2), !is.na(pop3), !is.na(doc), 
          !is.na(pat), !is.na(inc), !is.na(est)) %>% 
-  mutate(flag_sample = if_else(pchc %in% unique(total.raw$pchc), 1, 0))
+  mutate(flag_sample = if_else(pchc %in% unique(raw.total$pchc), 1, 0))
 
 
 ##---- Run Project ----
@@ -147,11 +147,11 @@ source('04_Codes/SampleProject.R', encoding = 'UTF-8')
 source('04_Codes/SmallSampleProjection.R', encoding = 'UTF-8')
 source('04_Codes/NationProject.R', encoding = 'UTF-8')
 
-# proj.sample <- SampleProject(total.raw, pchc.universe, target.city, market.def)
-proj.sample <- SampleProject(total.raw, pchc.universe)
+# proj.sample <- SampleProject(raw.total, pchc.universe, target.city, market.def)
+proj.sample <- SampleProject(raw.total, pchc.universe)
 
-# proj.sh <- ShanghaiProject(total.raw, pchc.universe)
-proj.sh <- SmallSampleProjection(total.raw, pchc.info, '上海')
+# proj.sh <- ShanghaiProject(raw.total, pchc.universe)
+proj.sh <- SmallSampleProjection(raw.total, pchc.info, '上海')
 
 proj.sample.total <- proj.sample %>% 
   filter(!(province %in% '上海')) %>% 
