@@ -6,7 +6,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-SmallSampleProjection <- function(raw.total, 
+ProjectSmallSample <- function(raw.total, 
                                   pchc.info, 
                                   small = '上海') {
   

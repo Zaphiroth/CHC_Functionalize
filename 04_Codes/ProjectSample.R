@@ -6,7 +6,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-SampleProject <- function(raw.total, 
+ProjectSample <- function(raw.total, 
                           pchc.universe) {
   
   ##---- Universe info ----

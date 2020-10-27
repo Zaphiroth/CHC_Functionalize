@@ -6,22 +6,22 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-FormatServier <- function(proj.sample.total, proj.nation, target.city, 
+FormatServier <- function(proj.price, target.city, 
                           market.def, corp.pack, pack.size, 
                           capital.47, prod.bid, corp.type, atc3.cn, 
                           molecule.cn, corp.add, packid.profile, 
                           prod.profile, city.en) {
   
   ##---- Adjustment ----
-  proj.total <- bind_rows(proj.sample.total, proj.nation) %>% 
-    mutate(year = stri_sub(date, 1, 4), 
-           quarter = stri_sub(date, 5, 6), 
-           quarter = ifelse(quarter %in% c("01", "02", "03"), "Q1",
-                            ifelse(quarter %in% c("04", "05", "06"), "Q2",
-                                   ifelse(quarter %in% c("07", "08", "09"), "Q3",
-                                          ifelse(quarter %in% c("10", "11", "12"), "Q4",
-                                                 NA_character_)))), 
-           quarter = stri_paste(year, quarter)) %>% 
+  proj.total <- proj.price %>% 
+    # mutate(year = stri_sub(date, 1, 4), 
+    #        quarter = stri_sub(date, 5, 6), 
+    #        quarter = ifelse(quarter %in% c("01", "02", "03"), "Q1",
+    #                         ifelse(quarter %in% c("04", "05", "06"), "Q2",
+    #                                ifelse(quarter %in% c("07", "08", "09"), "Q3",
+    #                                       ifelse(quarter %in% c("10", "11", "12"), "Q4",
+    #                                              NA_character_)))), 
+    #        quarter = stri_paste(year, quarter)) %>% 
     filter(city %in% target.city) %>% 
     group_by(year, quarter, date, province, city, packid, flag_sample) %>% 
     summarise(sales = sum(sales, na.rm = TRUE), 

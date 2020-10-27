@@ -6,7 +6,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
-NationProject <- function(proj.sample.total, 
+ProjectNation <- function(proj.sample.total, 
                           pchc.universe, 
                           city.tier) {
   
@@ -71,7 +71,8 @@ NationProject <- function(proj.sample.total,
               units = sum(units_m, na.rm = TRUE)) %>% 
     ungroup() %>% 
     filter(sales > 0, units > 0) %>% 
-    filter(!(city %in% unique(proj.sample.total$city)))
+    filter(!(city %in% unique(proj.sample.total$city))) %>% 
+    bind_rows(proj.sample.total)
   
   return(proj.nation)
 }

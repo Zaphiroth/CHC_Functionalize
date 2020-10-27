@@ -33,7 +33,8 @@ result.dist <- servier.result %>%
   ungroup()
 
 proj.rate <- left_join(raw.dist, result.dist, 
-                       by = c("market", "quarter", "province", "city", "packid"))
+                       by = c("market", "quarter", "province", "city", "packid")) %>% 
+  mutate(rate = result_sales / raw_sales - 1)
 
 chk <- proj.rate %>% 
   filter(is.na(product)) %>% 
@@ -45,6 +46,3 @@ write.xlsx(proj.rate, '05_Internal_Review/Seriver_Proj_Rate.xlsx')
 # chk <- raw.dist %>% 
 #   filter(!(prodid %in% stri_sub(total.proj$packid, 1, 5))) %>% 
 #   distinct(prodid)
-
-
-

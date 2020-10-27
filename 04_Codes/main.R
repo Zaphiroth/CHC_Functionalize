@@ -141,23 +141,22 @@ pchc.info <- bind_rows(raw.total, pchc.info.raw) %>%
 
 
 ##---- Run Project ----
-# source('04_Codes/SampleProject.R', encoding = 'UTF-8')
-source('04_Codes/SampleProject.R', encoding = 'UTF-8')
-# source('04_Codes/ShanghaiProject.R', encoding = 'UTF-8')
-source('04_Codes/SmallSampleProjection.R', encoding = 'UTF-8')
-source('04_Codes/NationProject.R', encoding = 'UTF-8')
+source('04_Codes/ProjectSample.R', encoding = 'UTF-8')
+source('04_Codes/ProjectSmallSample.R', encoding = 'UTF-8')
+source('04_Codes/ProjectNation.R', encoding = 'UTF-8')
+source('04_Codes/UpdatePrice.R', encoding = 'UTF-8')
 
-# proj.sample <- SampleProject(raw.total, pchc.universe, target.city, market.def)
 proj.sample <- SampleProject(raw.total, pchc.universe)
 
-# proj.sh <- ShanghaiProject(raw.total, pchc.universe)
-proj.sh <- SmallSampleProjection(raw.total, pchc.info, '上海')
+proj.small <- SmallSampleProjection(raw.total, pchc.info, '上海')
 
 proj.sample.total <- proj.sample %>% 
   filter(!(province %in% '上海')) %>% 
-  bind_rows(proj.sh)
+  bind_rows(proj.small)
 
 proj.nation <- NationProject(proj.sample.total, pchc.universe, city.tier)
+
+proj.price <- UpdatePrice(proj.nation, raw.total)
 
 
 ##---- Format info ----
@@ -246,7 +245,7 @@ city.en <- read.xlsx("02_Inputs/CityEN.xlsx")
 ##---- Run format ----
 source('04_Codes/FormatServier.R')
 
-servier.result <- FormatServier(proj.sample.total, proj.nation, target.city, 
+servier.result <- FormatServier(proj.price, target.city, 
                                 market.def, corp.pack, pack.size, 
                                 capital.47, prod.bid, corp.type, atc3.cn, 
                                 molecule.cn, corp.add, packid.profile, 
