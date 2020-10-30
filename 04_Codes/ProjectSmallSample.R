@@ -7,8 +7,9 @@
 
 
 ProjectSmallSample <- function(raw.total, 
-                                  pchc.info, 
-                                  small = '上海') {
+                               pchc.info, 
+                               small = '上海', 
+                               sample = c('上海', '北京')) {
   
   ##---- Shanghai info ----
   # Shanghai PCHC
@@ -49,14 +50,14 @@ ProjectSmallSample <- function(raw.total,
   #   mutate(flag_sample = if_else(pchc %in% unique(raw.total$pchc), 1, 0))
   
   pchc.sh <- pchc.info %>% 
-    filter(province %in% small)
+    filter(province %in% sample)
   
   # partition
   pchc.sh.sample <- pchc.sh %>% 
     filter(flag_sample == 1)
   
   pchc.sh.nonsample <- pchc.sh %>% 
-    filter(flag_sample == 0)
+    filter(flag_sample == 0, province %in% small)
   
   
   ##---- K-NN model ----

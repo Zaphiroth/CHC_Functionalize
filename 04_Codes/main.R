@@ -146,17 +146,24 @@ source('04_Codes/ProjectSmallSample.R', encoding = 'UTF-8')
 source('04_Codes/ProjectNation.R', encoding = 'UTF-8')
 source('04_Codes/UpdatePrice.R', encoding = 'UTF-8')
 
-proj.sample <- SampleProject(raw.total, pchc.universe)
+proj.sample <- ProjectSample(raw.total = raw.total, 
+                             pchc.universe = pchc.universe)
 
-proj.small <- SmallSampleProjection(raw.total, pchc.info, '上海')
+proj.small <- ProjectSmallSample(raw.total = raw.total, 
+                                 pchc.info = pchc.info, 
+                                 small = '上海', 
+                                 sample = c('上海', '北京'))
 
 proj.sample.total <- proj.sample %>% 
   filter(!(province %in% '上海')) %>% 
   bind_rows(proj.small)
 
-proj.nation <- NationProject(proj.sample.total, pchc.universe, city.tier)
+proj.nation <- ProjectNation(proj.sample.total = proj.sample.total, 
+                             pchc.universe = pchc.universe, 
+                             city.tier = city.tier)
 
-proj.price <- UpdatePrice(proj.nation, raw.total)
+proj.price <- UpdatePrice(proj.nation = proj.nation, 
+                          raw.total = raw.total)
 
 
 ##---- Format info ----
@@ -245,10 +252,19 @@ city.en <- read.xlsx("02_Inputs/CityEN.xlsx")
 ##---- Run format ----
 source('04_Codes/FormatServier.R')
 
-servier.result <- FormatServier(proj.price, target.city, 
-                                market.def, corp.pack, pack.size, 
-                                capital.47, prod.bid, corp.type, atc3.cn, 
-                                molecule.cn, corp.add, packid.profile, 
-                                prod.profile, city.en)
+servier.result <- FormatServier(proj.price = proj.price, 
+                                target.city = target.city, 
+                                market.def = market.def, 
+                                corp.pack = corp.pack, 
+                                pack.size = pack.size, 
+                                capital.47 = capital.47, 
+                                prod.bid = prod.bid, 
+                                corp.type = corp.type, 
+                                atc3.cn = atc3.cn, 
+                                molecule.cn = molecule.cn, 
+                                corp.add = corp.add, 
+                                packid.profile = packid.profile, 
+                                prod.profile = prod.profile, 
+                                city.en = city.en)
 
 write.xlsx(servier.result, '03_Outputs/Servier_CHC_Result.xlsx')

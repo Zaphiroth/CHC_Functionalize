@@ -20,25 +20,21 @@ raw.dist <- raw.total %>%
   left_join(market.def, by = 'packid') %>% 
   filter(!is.na(market)) %>% 
   filter(city %in% target.city) %>% 
-  group_by(market, quarter, province, city, packid) %>% 
+  group_by(quarter, province, city, packid) %>% 
   summarise(raw_sales = sum(sales, na.rm = TRUE), 
             raw_units = sum(units, na.rm = TRUE)) %>% 
   ungroup()
 
 result.dist <- servier.result %>% 
-  group_by(market = MKT, quarter = Date, province = Province, city = City, 
+  group_by(quarter = Date, province = Province, city = City, 
            product = Prod_Desc, packid = Pack_ID) %>% 
   summarise(result_sales = sum(Sales, na.rm = TRUE), 
             result_units = sum(Units, na.rm = TRUE)) %>% 
   ungroup()
 
 proj.rate <- left_join(raw.dist, result.dist, 
-                       by = c("market", "quarter", "province", "city", "packid")) %>% 
+                       by = c("quarter", "province", "city", "packid")) %>% 
   mutate(rate = result_sales / raw_sales - 1)
-
-chk <- proj.rate %>% 
-  filter(is.na(product)) %>% 
-  distinct(market, packid)
 
 write.xlsx(proj.rate, '05_Internal_Review/Seriver_Proj_Rate.xlsx')
 
