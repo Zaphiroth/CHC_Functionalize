@@ -31,8 +31,8 @@ FormatServier <- function(proj.price, target.city,
   adj.raw <- proj.total %>% 
     inner_join(market.def, by = 'packid') %>% 
     mutate(market = if_else(atc2 %in% c("C07", "C08"), "IHD", market)) %>% 
-    filter(!(market == "IHD" & molecule_desc == "IVABRADINE")) %>% 
-    filter(!(market == "OAD" & molecule_desc == "EPALRESTAT"))
+    filter(!(market == "IHD" & molecule == "IVABRADINE")) %>% 
+    filter(!(market == "OAD" & molecule == "EPALRESTAT"))
   
   adj.ihd <- adj.raw %>% 
     filter(atc2 %in% c('C07', 'C08')) %>% 
@@ -62,8 +62,8 @@ FormatServier <- function(proj.price, target.city,
     filter(stri_sub(pack_desc, 1, 3) %in% c("CAP", "TAB", "PIL")) %>% 
     mutate(dosage_units = pack_size * units,
            channel = "CHC") %>% 
-    group_by(province, city, year, quarter, market, atc3, molecule_desc, packid, 
-             pack_desc, prod_desc, corp_desc, channel) %>% 
+    group_by(province, city, year, quarter, market, atc3, molecule, packid, 
+             pack_desc, product, corp_desc, channel) %>% 
     summarise(units = sum(units, na.rm = TRUE),
               dosage_units = sum(dosage_units, na.rm = TRUE),
               sales = sum(sales, na.rm = TRUE)) %>% 
@@ -71,7 +71,7 @@ FormatServier <- function(proj.price, target.city,
     left_join(capital.47, by = 'city') %>% 
     mutate(prodid = stri_sub(packid, 1, 5)) %>% 
     left_join(prod.bid, by = 'prodid') %>% 
-    left_join(molecule.cn, by = 'molecule_desc') %>% 
+    left_join(molecule.cn, by = 'molecule') %>% 
     mutate(name1 = if_else(Molecule_CN %in% c("赖诺普利", "卡托普利"), 
                             "4+7分子", 
                             name1), 
@@ -129,8 +129,8 @@ FormatServier <- function(proj.price, target.city,
         atc3 == "C07A" ~     "BB",
         atc3 == "C08A" ~     "CCB",
         atc3 == "C01E" ~     "NITRITES",
-        molecule_desc == "TRIMETAZIDINE" ~   "TMZ",
-        atc3 == "C01D" & molecule_desc != "TRIMETAZIDINE" ~  "OTHERS",
+        molecule == "TRIMETAZIDINE" ~   "TMZ",
+        atc3 == "C01D" & molecule != "TRIMETAZIDINE" ~  "OTHERS",
         atc4 %in% c("C09B3", "C09D3") ~ "A+C FDC",
         atc4 %in% c("C09B1", "C09D1") ~ "A+D FDC",
         !is.na(atc4) ~ "OTHERS",
@@ -170,15 +170,15 @@ FormatServier <- function(proj.price, target.city,
         market == "IHD" & atc3 == "C07A" ~ "BB",
         market == "IHD" & atc3 == "C08A" ~ "CCB",
         market == "IHD" & atc3 == "C01E" ~ "NITRITES",
-        market == "IHD" & atc3 == "C01D" & molecule_desc == "TRIMETAZIDINE" ~ "TMZ",
-        market == "IHD" & atc3 == "C01D" & molecule_desc != "TRIMETAZIDINE"~ "OTHERS",
+        market == "IHD" & atc3 == "C01D" & molecule == "TRIMETAZIDINE" ~ "TMZ",
+        market == "IHD" & atc3 == "C01D" & molecule != "TRIMETAZIDINE"~ "OTHERS",
         TRUE ~ NA_character_
       ), 
       sales = round(sales, 2), 
       units = round(units), 
       dosage_units = round(dosage_units)
     ) %>% 
-    filter(molecule_desc != 'ENALAPRIL+FOLIC ACID') %>% 
+    filter(molecule != 'ENALAPRIL+FOLIC ACID') %>% 
     select(Pack_ID = packid, 
            Channel = channel, 
            Province = province, 
@@ -186,8 +186,8 @@ FormatServier <- function(proj.price, target.city,
            Date = quarter, 
            ATC3 = atc3, 
            MKT = market, 
-           Molecule_Desc = molecule_desc, 
-           Prod_Desc = prod_desc, 
+           Molecule_Desc = molecule, 
+           Prod_Desc = product, 
            Pck_Desc = pack_desc, 
            Corp_Desc = corp_desc, 
            Sales = sales, 

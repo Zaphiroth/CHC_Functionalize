@@ -49,13 +49,13 @@ ims.pack <- fread("02_Inputs/pfc与ims数据对应_20200708.csv") %>%
   mutate(packid = stri_pad_left(Pack_Id, 7, 0),
          atc3 = stri_sub(ATC4_Code, 1, 4),
          atc2 = stri_sub(ATC4_Code, 1, 3)) %>% 
-  distinct(packid, atc3, atc2, molecule_desc = Molecule_Desc, 
-           prod_desc = Prod_Desc)
+  distinct(packid, atc3, atc2, molecule = Molecule_Desc, 
+           product = Prod_Desc)
 
 # market definition
 market.def <- read_xlsx("02_Inputs/Market_Definition_20200708.xlsx") %>% 
-  distinct(molecule_desc = Molecule_Desc, market = TA) %>% 
-  right_join(ims.pack, by = "molecule_desc") %>% 
+  distinct(molecule = Molecule_Desc, market = TA) %>% 
+  right_join(ims.pack, by = "molecule") %>% 
   filter(!is.na(market))
 
 
@@ -166,6 +166,25 @@ proj.price <- UpdatePrice(proj.nation = proj.nation,
                           raw.total = raw.total)
 
 
+##---- Projection rate ----
+source('04_Codes/Review.R', encoding = 'UTF-8')
+
+proj.rate <- ReviewFunc(raw.total, 
+                        proj.sample.total, 
+                        proj.nation, 
+                        market.def, 
+                        target.city)
+
+servier.proj.rate <- proj.rate %>% 
+  left_join(market.def, by = 'packid') %>% 
+  filter(!is.na(market)) %>% 
+  filter(city %in% target.city) %>% 
+  select(quarter, date, province, city, market, molecule, product, packid, 
+         starts_with('raw'), starts_with('proj'))
+
+write.xlsx(servier.proj.rate, '05_Internal_Review/Seriver_Projection_Rate.xlsx')
+
+
 ##---- Format info ----
 # zs flag
 zs.flag.raw <- read.xlsx("02_Inputs/13城市的招标flag_zs_flag.xlsx")
@@ -223,7 +242,7 @@ corp.type <- distinct(corp.atc3, corp_desc = Corp_Desc, Mnf_Type = `厂家性质
 
 atc3.cn <- distinct(corp.atc3, atc3 = ATC3_Code, `ATC3中文分类` = `类别`)
 
-molecule.cn <- distinct(corp.atc3, molecule_desc = Molecule_Desc, Molecule_CN = `分子`)
+molecule.cn <- distinct(corp.atc3, molecule = Molecule_Desc, Molecule_CN = `分子`)
 
 corp.add <- read_xlsx("02_Inputs/Corp_Info_20200720.xlsx") %>% 
   group_by(corp_desc = Corp_Desc) %>% 
@@ -268,3 +287,4 @@ servier.result <- FormatServier(proj.price = proj.price,
                                 city.en = city.en)
 
 write.xlsx(servier.result, '03_Outputs/Servier_CHC_Result.xlsx')
+
